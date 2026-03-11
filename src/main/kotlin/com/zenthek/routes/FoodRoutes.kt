@@ -1,0 +1,81 @@
+package com.zenthek.routes
+
+import com.zenthek.service.FoodService
+import com.zenthek.services.OpenAiApiService
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+
+fun Application.configureRouting(
+    foodService: FoodService,
+    openAiClient: OpenAiApiService
+) {
+    routing {
+        get("/health") {
+            call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
+        }
+
+        route("/api/food") {
+            
+            get("/search") {
+                val query = call.request.queryParameters["q"]?.trim()
+                    ?: throw IllegalArgumentException("Missing required parameter: q")
+                if (query.isBlank()) throw IllegalArgumentException("Parameter 'q' must not be blank")
+
+                val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
+                val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 25
+                if (pageSize > 50) throw IllegalArgumentException("pageSize cannot exceed 50")
+
+                val results = foodService.search(query, page, pageSize)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf(
+                        "results" to results,
+                        "totalResults" to results.size,
+                        "page" to page,
+                        "pageSize" to pageSize
+                    )
+                )
+            }
+
+            get("/barcode/{barcode}") {
+                val barcode = call.parameters["barcode"]?.trim()
+                    ?: throw IllegalArgumentException("Missing barcode path parameter")
+                if (barcode.isBlank() || !barcode.all { it.isDigit() }) {
+                    throw IllegalArgumentException("Barcode must contain only digits")
+                }
+
+                val result = foodService.getByBarcode(barcode)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf("result" to result)
+                )
+            }
+
+            // Existing endpoint
+            post("/analyze-image") {
+                try {
+                    val body = call.receive<Map<String, String>>()
+                    val base64Image = body["image"]
+
+                    if (base64Image == null) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing image data"))
+                        return@post
+                    }
+
+                    // For MVP simplicity, assume incoming image is JPEG
+                    val imageBytes = java.util.Base64.getDecoder().decode(base64Image)
+                    val textPrompt = body["prompt"]
+                    val analysisResult = openAiClient.analyzeImage(imageBytes, textPrompt, "image/jpeg")
+                    call.respond(HttpStatusCode.OK, mapOf("result" to analysisResult))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+        }
+    }
+}
