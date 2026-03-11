@@ -23,18 +23,18 @@ class FoodService(
             lastException = e
         }
 
-        // 2. Try FatSecret
+        // 2. Try USDA
         try {
-            val fsResult = fsClient.getByBarcode(barcode)
-            if (fsResult != null) return fsResult
+            val usdaResult = usdaClient.getByBarcode(barcode)
+            if (usdaResult != null) return usdaResult
         } catch (e: Exception) {
             lastException = e
         }
 
-        // 3. Try USDA
+        // 3. Try FatSecret
         try {
-            val usdaResult = usdaClient.getByBarcode(barcode)
-            if (usdaResult != null) return usdaResult
+            val fsResult = fsClient.getByBarcode(barcode)
+            if (fsResult != null) return fsResult
         } catch (e: Exception) {
             lastException = e
         }
@@ -47,6 +47,9 @@ class FoodService(
         // All returned null successfully
         return null
     }
+
+    suspend fun autocomplete(query: String, limit: Int): List<String> =
+        runCatching { offClient.autocomplete(query, limit) }.getOrDefault(emptyList())
 
     suspend fun search(query: String, page: Int, pageSize: Int): List<FoodItem> = coroutineScope {
         val offDeferred = async { runCatching { offClient.search(query, page, pageSize) }.getOrNull() }

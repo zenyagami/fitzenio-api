@@ -19,6 +19,18 @@ fun Application.configureRouting(
 
         route("/api/food") {
             
+            get("/autocomplete") {
+                val query = call.request.queryParameters["q"]?.trim()
+                    ?: throw IllegalArgumentException("Missing required parameter: q")
+                if (query.isBlank()) throw IllegalArgumentException("Parameter 'q' must not be blank")
+
+                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
+                if (limit > 25) throw IllegalArgumentException("limit cannot exceed 25")
+
+                val suggestions = foodService.autocomplete(query, limit)
+                call.respond(HttpStatusCode.OK, mapOf("suggestions" to suggestions))
+            }
+
             get("/search") {
                 val query = call.request.queryParameters["q"]?.trim()
                     ?: throw IllegalArgumentException("Missing required parameter: q")

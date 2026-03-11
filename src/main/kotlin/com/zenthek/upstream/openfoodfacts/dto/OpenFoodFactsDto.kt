@@ -3,20 +3,12 @@ package com.zenthek.upstream.openfoodfacts.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Used for GET /api/v3/product/{code} — brands is a comma-separated String
 @Serializable
 data class OpenFoodFactsProductResponse(
     val code: String?,
-    val status: Int,
-    @SerialName("status_verbose") val statusVerbose: String? = null,
+    val status: String,
     val product: OpenFoodFactsProduct? = null
-)
-
-@Serializable
-data class OpenFoodFactsSearchResponse(
-    val count: Int,
-    val page: Int,
-    @SerialName("page_size") val pageSize: Int,
-    val products: List<OpenFoodFactsProduct>
 )
 
 @Serializable
@@ -24,6 +16,26 @@ data class OpenFoodFactsProduct(
     val code: String? = null,
     @SerialName("product_name") val productName: String? = null,
     val brands: String? = null,
+    @SerialName("serving_size") val servingSize: String? = null,
+    @SerialName("serving_quantity") val servingQuantity: Float? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
+    val nutriments: OpenFoodFactsNutriments? = null
+)
+
+// Used for GET https://search.openfoodfacts.org/search — brands is a List<String>
+@Serializable
+data class OpenFoodFactsV3SearchResponse(
+    val hits: List<OpenFoodFactsV3SearchProduct> = emptyList(),
+    val count: Int = 0,
+    val page: Int = 1,
+    @SerialName("page_size") val pageSize: Int = 25
+)
+
+@Serializable
+data class OpenFoodFactsV3SearchProduct(
+    val code: String? = null,
+    @SerialName("product_name") val productName: String? = null,
+    val brands: List<String>? = null,
     @SerialName("serving_size") val servingSize: String? = null,
     @SerialName("serving_quantity") val servingQuantity: Float? = null,
     @SerialName("image_url") val imageUrl: String? = null,

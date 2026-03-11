@@ -12,7 +12,29 @@
       "Bash(gcloud container:*)",
       "Bash(SA=\"serviceAccount:225613129645-compute@developer.gserviceaccount.com\"\ngcloud secrets add-iam-policy-binding FATSECRET_CLIENT_ID --member=\"$SA\" --role=\"roles/secretmanager.secretAccessor\" --project=fitzenio\ngcloud secrets add-iam-policy-binding FATSECRET_CLIENT_SECRET --member=\"$SA\" --role=\"roles/secretmanager.secretAccessor\" --project=fitzenio\ngcloud secrets add-iam-policy-binding USDA_API_KEY --member=\"$SA\" --role=\"roles/secretmanager.secretAccessor\" --project=fitzenio\ngcloud secrets add-iam-policy-binding OPENAI_API_KEY --member=\"$SA\" --role=\"roles/secretmanager.secretAccessor\" --project=fitzenio\necho \"Done!\")",
       "Bash(gcloud run:*)",
-      "Bash(curl -s https://fitzenio-api-prod-vtz5mtnlsq-lz.a.run.app/health\ncurl -s https://fitzenio-api-dev-6iqstbhjfq-lz.a.run.app/health)"
+      "Bash(curl -s https://fitzenio-api-prod-vtz5mtnlsq-lz.a.run.app/health\ncurl -s https://fitzenio-api-dev-6iqstbhjfq-lz.a.run.app/health)",
+      "WebFetch(domain:wiki.openfoodfacts.org)",
+      "WebFetch(domain:world.openfoodfacts.org)",
+      "WebFetch(domain:openfoodfacts.github.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://api.github.com/repos/openfoodfacts/openfoodfacts-server/contents/docs/api\" 2>/dev/null | python3 -c \"import json,sys; [print\\(f['name'], f['type']\\) for f in json.load\\(sys.stdin\\)]\" 2>/dev/null || echo \"failed\")",
+      "Bash(curl -s \"https://api.github.com/repos/openfoodfacts/openfoodfacts-server/contents/docs/api/ref\" 2>/dev/null | python3 -c \"import json,sys; [print\\(f['name'], f['type']\\) for f in json.load\\(sys.stdin\\)]\" 2>/dev/null || echo \"failed\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api-v3.yaml\" 2>/dev/null | head -300)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api-v3.yaml\" 2>/dev/null | grep -A 100 \"search\" | head -200)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api-v3.yaml\" 2>/dev/null | grep -n \"path\\\\|/search\\\\|suggest\\\\|autocomplete\" | head -50)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api-v3.yaml\" 2>/dev/null | grep -n \"path\\\\|/api/v3\\\\|/api/v2\" | head -60)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api.yaml\" 2>/dev/null | grep -n \"/search\\\\|suggest\\\\|autocomplete\" | head -40)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfoodfacts/openfoodfacts-server/main/docs/api/ref/api.yaml\" 2>/dev/null | sed -n '395,430p')",
+      "WebFetch(domain:search.openfoodfacts.org)",
+      "Bash(curl -s \"https://search.openfoodfacts.org/openapi.json\" 2>/dev/null | python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(m.upper\\(\\), p\\) for p,ms in d['paths'].items\\(\\) for m in ms if m in ['get','post']]\" 2>/dev/null | head -30)",
+      "Bash(curl -s \"https://search.openfoodfacts.org/openapi.json\" 2>/dev/null | python3 -c \"\nimport json,sys\nd=json.load\\(sys.stdin\\)\n# Print search GET params\nprint\\('=== GET /search ==='\\)\nfor p in d['paths']['/search']['get'].get\\('parameters', []\\):\n    print\\(f\\\\\"  {p.get\\('name'\\)} \\({p.get\\('in'\\)}\\): {p.get\\('description',''\\)[:80]}\\\\\"\\)\n\nprint\\(\\)\nprint\\('=== GET /autocomplete ==='\\)\nfor p in d['paths']['/autocomplete']['get'].get\\('parameters', []\\):\n    print\\(f\\\\\"  {p.get\\('name'\\)} \\({p.get\\('in'\\)}\\): {p.get\\('description',''\\)[:80]}\\\\\"\\)\n\" 2>/dev/null)",
+      "Bash(curl -s \"https://search.openfoodfacts.org/openapi.json\" 2>/dev/null | python3 -c \"\nimport json,sys\nd=json.load\\(sys.stdin\\)\n\n# Print search GET response schema\nprint\\('=== GET /search response 200 ==='\\)\nresp = d['paths']['/search']['get']['responses']['200']\nschema = resp.get\\('content', {}\\).get\\('application/json', {}\\).get\\('schema', {}\\)\nprint\\(json.dumps\\(schema, indent=2\\)[:3000]\\)\n\")",
+      "Bash(curl -s \"https://search.openfoodfacts.org/openapi.json\" 2>/dev/null | python3 -c \"\nimport json,sys\nd=json.load\\(sys.stdin\\)\nschemas = d['components']['schemas']\n\n# Print SuccessSearchResponse\nprint\\('=== SuccessSearchResponse ==='\\)\nprint\\(json.dumps\\(schemas['SuccessSearchResponse'], indent=2\\)[:2000]\\)\n\nprint\\(\\)\nprint\\('=== autocomplete response ==='\\)\nresp = d['paths']['/autocomplete']['get']['responses']['200']\nschema = resp.get\\('content', {}\\).get\\('application/json', {}\\).get\\('schema', {}\\)\nprint\\(json.dumps\\(schema, indent=2\\)[:2000]\\)\n\")",
+      "Bash(curl -s \"https://search.openfoodfacts.org/openapi.json\" 2>/dev/null | python3 -c \"\nimport json,sys\nd=json.load\\(sys.stdin\\)\n\n# Check autocomplete response details\nprint\\('=== Full autocomplete endpoint ==='\\)\nprint\\(json.dumps\\(d['paths']['/autocomplete'], indent=2\\)[:3000]\\)\n\")",
+      "Bash(curl -s \"https://search.openfoodfacts.org/search?q=banana&page_size=2&fields=code,product_name,brands,serving_size,serving_quantity,image_url,nutriments&page=1\" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -80)",
+      "Bash(curl -s \"https://search.openfoodfacts.org/search?q=banana&page_size=1&fields=code,product_name,brands,serving_size,serving_quantity,image_url,nutriments&page=1\" 2>/dev/null | python3 -c \"\nimport json,sys\nd=json.load\\(sys.stdin\\)\nprint\\('count:', d['count']\\)\nprint\\('hits structure:'\\)\nif d['hits']:\n    print\\(json.dumps\\(d['hits'][0], indent=2\\)\\)\n\")",
+      "Bash(curl -s \"https://search.openfoodfacts.org/autocomplete?q=ban&taxonomy_names=product_name&lang=en&size=5\" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -50)",
+      "Bash(./gradlew compileKotlin 2>&1 | tail -30)"
     ]
   }
 }
