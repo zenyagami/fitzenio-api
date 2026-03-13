@@ -1,8 +1,9 @@
 package com.zenthek.routes
 
+import com.zenthek.model.AnalyzeImageRequest
 import com.zenthek.model.SearchResponse
 import com.zenthek.service.FoodService
-import com.zenthek.services.OpenAiApiService
+import com.zenthek.fitzenio.rest.com.zenthek.upstream.openai.OpenAiApiService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -61,25 +62,11 @@ fun Application.configureRouting(
                 )
             }
 
-            // Existing endpoint
             post("/analyze-image") {
-                try {
-                    val body = call.receive<Map<String, String>>()
-                    val base64Image = body["image"]
-
-                    if (base64Image == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing image data"))
-                        return@post
-                    }
-
-                    // For MVP simplicity, assume incoming image is JPEG
-                    val imageBytes = java.util.Base64.getDecoder().decode(base64Image)
-                    val textPrompt = body["prompt"]
-                    val analysisResult = openAiClient.analyzeImage(imageBytes, textPrompt, "image/jpeg")
-                    call.respond(HttpStatusCode.OK, mapOf("result" to analysisResult))
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
-                }
+                val body = call.receive<AnalyzeImageRequest>()
+                val imageBytes = java.util.Base64.getDecoder().decode(body.image)
+                val result = openAiClient.analyzeImage(imageBytes, body.mealTitle, body.additionalContext, body.locale, "image/jpeg")
+                call.respond(HttpStatusCode.OK, result)
             }
         }
     }

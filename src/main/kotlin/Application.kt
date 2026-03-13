@@ -2,7 +2,7 @@ package com.zenthek.fitzenio.rest
 
 import com.zenthek.routes.configureRouting
 import com.zenthek.service.FoodService
-import com.zenthek.services.OpenAiApiService
+import com.zenthek.fitzenio.rest.com.zenthek.upstream.openai.OpenAiApiService
 import com.zenthek.upstream.fatsecret.FatSecretClient
 import com.zenthek.upstream.fatsecret.FatSecretTokenManager
 import com.zenthek.upstream.openfoodfacts.OpenFoodFactsClient

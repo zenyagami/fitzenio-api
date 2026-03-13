@@ -52,3 +52,35 @@ data class ApiError(
     val code: String,   // e.g. "MISSING_QUERY", "UPSTREAM_FAILURE"
     val message: String
 )
+
+@Serializable
+data class ImageAnalysisItem(
+    val name: String,
+    val portionDescription: String,
+    val weightG: Int,
+    val confidence: String,
+    val calories: Int,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val fiberG: Double?
+)
+
+@Serializable
+data class ImageAnalysisResponse(
+    val items: List<ImageAnalysisItem>,
+    val totalCalories: Int,
+    val totalProteinG: Double,
+    val totalCarbsG: Double,
+    val totalFatG: Double,
+    val totalFiberG: Double?,
+    val notes: String?
+)
+
+@Serializable
+data class AnalyzeImageRequest(
+    val image: String,
+    val mealTitle: String? = null,
+    val additionalContext: String? = null,
+    val locale: String? = null  // BCP 47 locale tag, e.g. "pt-BR", "fr-FR". Affects food names and notes language.
+)
