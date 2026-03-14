@@ -2,6 +2,7 @@ package com.zenthek.fitzenio.rest.com.zenthek.upstream.openai
 
 import com.zenthek.model.ImageAnalysisResponse
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -112,6 +113,7 @@ class OpenAiApiService(
             header(HttpHeaders.Authorization, "Bearer $apiKey")
             contentType(ContentType.Application.Json)
             setBody(requestBody)
+            timeout { requestTimeoutMillis = 60_000 }
         }
 
         val responseText = response.bodyAsText()

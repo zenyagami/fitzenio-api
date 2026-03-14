@@ -1,4 +1,3 @@
-> **Copy this file to the root of your Ktor project as `CLAUDE.md`.**
 > Cross-reference `food-api-backend.md` for the full API specification — both files travel together.
 
 ---
