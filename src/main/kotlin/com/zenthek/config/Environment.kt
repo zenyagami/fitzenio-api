@@ -8,6 +8,8 @@ private fun env(key: String): String? = dotenv[key]
 data class AppConfig(
     val environment: AppEnvironment,
     val apiKeys: ApiKeys,
+    val useGemini: Boolean,
+    val geminiApiKey: String,
 )
 
 data class ApiKeys(
@@ -48,11 +50,13 @@ object ConfigLoader {
         return AppConfig(
             environment = AppEnvironment.DEVELOPMENT,
             apiKeys = ApiKeys(
-                fatSecretClientId = env("FATSECRET_CLIENT_ID") ?: "mock_fatsecret_client_id",
-                fatSecretClientSecret = env("FATSECRET_CLIENT_SECRET") ?: "mock_fatsecret_client_secret",
-                usdaApiKey = env("USDA_API_KEY") ?: "mock_usda_api_key",
-                openAiApiKey = env("OPENAI_API_KEY") ?: "mock_openai_api_key"
-            )
+                fatSecretClientId = env("FATSECRET_CLIENT_ID") ?: error("Missing FATSECRET_CLIENT_ID"),
+                fatSecretClientSecret = env("FATSECRET_CLIENT_SECRET") ?: error("Missing FATSECRET_CLIENT_SECRET"),
+                usdaApiKey = env("USDA_API_KEY") ?: error("Missing USDA_API_KEY"),
+                openAiApiKey = env("OPENAI_API_KEY") ?: error("Missing OPENAI_API_KEY")
+            ),
+            useGemini = true,
+            geminiApiKey = env("GEMINI_API_KEY") ?: error("Missing GEMINI_API_KEY"),
         )
     }
 
@@ -64,7 +68,9 @@ object ConfigLoader {
                 fatSecretClientSecret = env("FATSECRET_CLIENT_SECRET") ?: error("Missing FATSECRET_CLIENT_SECRET"),
                 usdaApiKey = env("USDA_API_KEY") ?: error("Missing USDA_API_KEY"),
                 openAiApiKey = env("OPENAI_API_KEY") ?: error("Missing OPENAI_API_KEY")
-            )
+            ),
+            useGemini = true,
+            geminiApiKey = env("GEMINI_API_KEY") ?: error("Missing GEMINI_API_KEY")
         )
     }
 }

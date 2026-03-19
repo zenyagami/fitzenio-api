@@ -57,7 +57,7 @@ data class ApiError(
 data class ImageAnalysisItem(
     val name: String,
     val portionDescription: String,
-    val weightG: Int,
+    val weightG: Double,
     val confidence: String,
     val calories: Int,
     val proteinG: Double,

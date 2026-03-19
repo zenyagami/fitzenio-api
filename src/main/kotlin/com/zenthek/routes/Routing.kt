@@ -1,9 +1,10 @@
 package com.zenthek.routes
 
 import com.zenthek.model.AnalyzeImageRequest
+import com.zenthek.model.ImageAnalyzer
 import com.zenthek.model.SearchResponse
 import com.zenthek.service.FoodService
-import com.zenthek.fitzenio.rest.com.zenthek.upstream.openai.OpenAiApiService
+import com.zenthek.upstream.openai.OpenAiApiService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -12,6 +13,7 @@ import io.ktor.server.routing.*
 
 fun Application.configureRouting(
     foodService: FoodService,
+    imageAnalyzer: ImageAnalyzer,
     openAiClient: OpenAiApiService
 ) {
     routing {
@@ -65,7 +67,7 @@ fun Application.configureRouting(
             post("/analyze-image") {
                 val body = call.receive<AnalyzeImageRequest>()
                 val imageBytes = java.util.Base64.getDecoder().decode(body.image)
-                val result = openAiClient.analyzeImage(imageBytes, body.mealTitle, body.additionalContext, body.locale, "image/jpeg")
+                val result = imageAnalyzer.analyzeImage(imageBytes, body.mealTitle, body.additionalContext, body.locale, "image/jpeg")
                 call.respond(HttpStatusCode.OK, result)
             }
 

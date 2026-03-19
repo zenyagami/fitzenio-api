@@ -1,9 +1,11 @@
 package com.zenthek.fitzenio.rest
 
+import com.zenthek.model.ImageAnalyzer
 import com.zenthek.routes.configureRouting
 import com.zenthek.service.FoodService
-import com.zenthek.fitzenio.rest.com.zenthek.upstream.openai.OpenAiApiService
+import com.zenthek.upstream.openai.OpenAiApiService
 import com.zenthek.upstream.fatsecret.FatSecretClient
+import com.zenthek.upstream.gemini.GeminiApiService
 import com.zenthek.upstream.fatsecret.FatSecretTokenManager
 import com.zenthek.upstream.openfoodfacts.OpenFoodFactsClient
 import com.zenthek.upstream.usda.UsdaClient
@@ -28,16 +30,23 @@ fun Application.module() {
     // Load environment configuration
     val config = ConfigLoader.loadConfig()
 
-    println("🚀 Starting Fitzenio API in ${config.environment} mode")
+    log.info("Starting Fitzenio API in ${config.environment} mode")
 
     val httpClient = buildHttpClient()
-    
+
     val offClient = OpenFoodFactsClient(httpClient)
     val fsTokenManager = FatSecretTokenManager(httpClient, config.apiKeys)
     val fsClient = FatSecretClient(httpClient, fsTokenManager)
     val usdaClient = UsdaClient(httpClient, config.apiKeys.usdaApiKey)
     val openAiClient = OpenAiApiService(httpClient, config.apiKeys.openAiApiKey)
-    
+    val imageAnalyzer: ImageAnalyzer = if (config.useGemini) {
+        log.info("Image analysis backend: Gemini Flash")
+        GeminiApiService(httpClient, config.geminiApiKey)
+    } else {
+        log.info("Image analysis backend: GPT-5-mini")
+        openAiClient
+    }
+
     val foodService = FoodService(offClient, fsClient, usdaClient)
 
     install(ContentNegotiation) {
@@ -59,7 +68,7 @@ fun Application.module() {
             )
         }
     }
-    configureRouting(foodService, openAiClient)
+    configureRouting(foodService, imageAnalyzer, openAiClient)
 }
 
 fun buildHttpClient(): HttpClient = HttpClient(CIO) {
