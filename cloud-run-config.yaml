@@ -60,6 +60,13 @@ spec:
             secretKeyRef:
               name: OPENAI_API_KEY
               key: latest
+        - name: USE_GEMINI
+          value: "true"
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: GEMINI_API_KEY
+              key: latest
         resources:
           limits:
             cpu: "1"

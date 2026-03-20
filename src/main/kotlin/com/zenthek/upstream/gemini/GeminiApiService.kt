@@ -8,11 +8,14 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.util.Base64
 
 private const val GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
+private const val CACHE_TTL_SECONDS = 3600L // 1 hour
 private val json = Json { ignoreUnknownKeys = true }
 
 class GeminiApiService(
@@ -20,6 +23,43 @@ class GeminiApiService(
     private val apiKey: String
 ) : ImageAnalyzer {
     private val log = LoggerFactory.getLogger(GeminiApiService::class.java)
+    private val cacheMutex = Mutex()
+    private var cachedContentName: String? = null
+    private var cacheExpiresAt: Long = 0L
+
+    private suspend fun getOrCreateCache(): String = cacheMutex.withLock {
+        val now = System.currentTimeMillis()
+        val existing = cachedContentName
+        if (existing != null && now < cacheExpiresAt) return@withLock existing
+
+        log.info("Creating Gemini context cache for system prompt")
+        val response = client.post(
+            "https://generativelanguage.googleapis.com/v1beta/cachedContents?key=$apiKey"
+        ) {
+            contentType(ContentType.Application.Json)
+            setBody(buildJsonObject {
+                put("model", "models/$GEMINI_MODEL")
+                putJsonObject("systemInstruction") {
+                    putJsonArray("parts") { addJsonObject { put("text", IMAGE_ANALYZE_SYSTEM_PROMPT) } }
+                }
+                put("ttl", "${CACHE_TTL_SECONDS}s")
+            })
+        }
+
+        val responseText = response.bodyAsText()
+        val name = try {
+            json.parseToJsonElement(responseText).jsonObject["name"]?.jsonPrimitive?.content
+                ?: error("Missing 'name' in cache response: $responseText")
+        } catch (e: Exception) {
+            log.error("Failed to create Gemini context cache: ${e.message}. Response: $responseText")
+            throw e
+        }
+
+        cachedContentName = name
+        cacheExpiresAt = now + (CACHE_TTL_SECONDS - 60) * 1000L // refresh 1 min before expiry
+        log.info("Gemini context cache created: $name, expires in ${CACHE_TTL_SECONDS}s")
+        name
+    }
 
     override suspend fun analyzeImage(
         imageBytes: ByteArray,
@@ -39,10 +79,10 @@ class GeminiApiService(
             append("Analyze the food in this image.")
         }
 
+        val cacheName = getOrCreateCache()
+
         val requestBody = buildJsonObject {
-            putJsonObject("system_instruction") {
-                putJsonArray("parts") { addJsonObject { put("text", IMAGE_ANALYZE_SYSTEM_PROMPT) } }
-            }
+            put("cachedContent", cacheName)
             putJsonArray("contents") {
                 addJsonObject {
                     putJsonArray("parts") {
