@@ -38,23 +38,24 @@ fun Application.module() {
     val fsTokenManager = FatSecretTokenManager(httpClient, config.apiKeys)
     val fsClient = FatSecretClient(httpClient, fsTokenManager)
     val usdaClient = UsdaClient(httpClient, config.apiKeys.usdaApiKey)
-    val openAiClient = OpenAiApiService(httpClient, config.apiKeys.openAiApiKey)
     val imageAnalyzer: ImageAnalyzer = if (config.useGemini) {
         log.info("Image analysis backend: Gemini Flash")
         GeminiApiService(httpClient, config.geminiApiKey)
     } else {
         log.info("Image analysis backend: GPT-5-mini")
-        openAiClient
+        OpenAiApiService(httpClient, config.apiKeys.openAiApiKey)
     }
 
     val foodService = FoodService(offClient, fsClient, usdaClient)
 
+    val appJson = Json {
+        prettyPrint = true
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
+
     install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
+        json(appJson)
     }
 
     install(StatusPages) {
@@ -68,7 +69,7 @@ fun Application.module() {
             )
         }
     }
-    configureRouting(foodService, imageAnalyzer, openAiClient)
+    configureRouting(foodService, imageAnalyzer)
 }
 
 fun buildHttpClient(): HttpClient = HttpClient(CIO) {

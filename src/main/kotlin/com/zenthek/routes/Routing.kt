@@ -1,20 +1,28 @@
 package com.zenthek.routes
 
 import com.zenthek.model.AnalyzeImageRequest
+import com.zenthek.model.ImageAnalysisResponse
 import com.zenthek.model.ImageAnalyzer
 import com.zenthek.model.SearchResponse
 import com.zenthek.service.FoodService
-import com.zenthek.upstream.openai.OpenAiApiService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.*
+import kotlinx.serialization.json.Json
+
+private val sseJson = Json { ignoreUnknownKeys = true }
+
+private suspend fun ByteWriteChannel.sendSseEvent(event: String, data: String) {
+    writeFully("event: $event\ndata: $data\n\n".toByteArray(Charsets.UTF_8))
+    flush()
+}
 
 fun Application.configureRouting(
     foodService: FoodService,
     imageAnalyzer: ImageAnalyzer,
-    openAiClient: OpenAiApiService
 ) {
     routing {
         get("/health") {
@@ -22,7 +30,7 @@ fun Application.configureRouting(
         }
 
         route("/api/food") {
-            
+
             get("/autocomplete") {
                 val query = call.request.queryParameters["q"]?.trim()
                     ?: throw IllegalArgumentException("Missing required parameter: q")
@@ -67,15 +75,36 @@ fun Application.configureRouting(
             post("/analyze-image") {
                 val body = call.receive<AnalyzeImageRequest>()
                 val imageBytes = java.util.Base64.getDecoder().decode(body.image)
-                val result = imageAnalyzer.analyzeImage(imageBytes, body.mealTitle, body.additionalContext, body.locale, "image/jpeg")
+                val result = imageAnalyzer.analyzeImage(
+                    imageBytes,
+                    body.mealTitle,
+                    body.additionalContext,
+                    body.locale,
+                    "image/jpeg"
+                )
                 call.respond(HttpStatusCode.OK, result)
             }
 
-            post("/analyze-image-fast") {
+            post("/analyze-image-stream") {
                 val body = call.receive<AnalyzeImageRequest>()
                 val imageBytes = java.util.Base64.getDecoder().decode(body.image)
-                val result = openAiClient.analyzeImageFast(imageBytes, body.mealTitle, body.additionalContext, body.locale, "image/jpeg")
-                call.respond(HttpStatusCode.OK, result)
+                call.response.cacheControl(CacheControl.NoCache(null))
+                call.respondBytesWriter(contentType = ContentType.Text.EventStream) {
+                    sendSseEvent("status", """{"phase":"analyzing"}""")
+                    try {
+                        val result = imageAnalyzer.analyzeImage(
+                            imageBytes,
+                            body.mealTitle,
+                            body.additionalContext,
+                            body.locale,
+                            "image/jpeg"
+                        )
+                        sendSseEvent("result", sseJson.encodeToString(ImageAnalysisResponse.serializer(), result))
+                    } catch (e: Exception) {
+                        application.log.error("SSE analyze-image-stream failed", e)
+                        sendSseEvent("error", """{"message":"Analysis failed"}""")
+                    }
+                }
             }
         }
     }

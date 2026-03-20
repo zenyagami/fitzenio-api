@@ -14,6 +14,12 @@ import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.util.Base64
 
+enum class GeminiThinkingBudget(val tokens: Int) {
+    LOW(1024),
+    MEDIUM(8192),
+    HIGH(24576)
+}
+
 private const val GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 private const val CACHE_TTL_SECONDS = 3600L // 1 hour
 private val json = Json { ignoreUnknownKeys = true }
@@ -99,18 +105,24 @@ class GeminiApiService(
             putJsonObject("generationConfig") {
                 put("maxOutputTokens", 3000)
                 put("responseMimeType", "application/json")
+                putJsonObject("thinkingConfig") {
+                    put("thinkingBudget", GeminiThinkingBudget.MEDIUM.tokens)
+                }
             }
         }
 
+        log.info("Calling Gemini generateContent for model=$GEMINI_MODEL")
         val response = client.post(
             "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$apiKey"
         ) {
             contentType(ContentType.Application.Json)
             setBody(requestBody)
-            timeout { requestTimeoutMillis = 30_000 }
+            timeout { requestTimeoutMillis = 90_000 }
         }
+        log.info("Gemini generateContent response status=${response.status}")
 
         val responseText = response.bodyAsText()
+        log.debug("Gemini raw response: $responseText")
         val content = try {
             json.parseToJsonElement(responseText).jsonObject["candidates"]
                 ?.jsonArray?.firstOrNull()
